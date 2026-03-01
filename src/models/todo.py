@@ -1,0 +1,36 @@
+import enum
+from datetime import datetime
+
+from sqlalchemy import String, Enum, DateTime, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from src.database import Base
+
+
+class Priority(str, enum.Enum):
+    low = "low"
+    medium = "medium"
+    high = "high"
+
+
+class Status(str, enum.Enum):
+    pending = "pending"
+    in_progress = "in_progress"
+    done = "done"
+
+
+class TodoORM(Base):
+    __tablename__ = "todos"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    due_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    priority: Mapped[Priority] = mapped_column(Enum(Priority), default=Priority.medium)
+    status: Mapped[Status] = mapped_column(Enum(Status), default=Status.pending)
+    tags: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+    last_reminded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
