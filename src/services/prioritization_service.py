@@ -12,10 +12,17 @@ from src.services.todo_service import TodoService
 
 class PrioritizationService:
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        self.client = (
+            anthropic.Anthropic(api_key=settings.anthropic_api_key)
+            if settings.anthropic_api_key
+            else None
+        )
         self.todo_service = TodoService()
 
     def prioritize(self, db: Session, todos: list[TodoORM]) -> list[dict]:
+        if not self.client:
+            return [{"error": "AI features are disabled — no Anthropic API key configured."}]
+
         if not todos:
             return []
 

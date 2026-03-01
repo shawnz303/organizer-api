@@ -87,10 +87,21 @@ TOOLS = [
 
 class AgentService:
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        self.client = (
+            anthropic.Anthropic(api_key=settings.anthropic_api_key)
+            if settings.anthropic_api_key
+            else None
+        )
         self.todo_service = TodoService()
 
     def chat(self, db: Session, user_message: str) -> dict:
+        if not self.client:
+            return {
+                "reply": "AI features are disabled — no Anthropic API key configured.",
+                "actions_taken": [],
+                "todos_affected": [],
+            }
+
         messages = [{"role": "user", "content": user_message}]
         actions_taken: list[str] = []
         todos_affected: list = []
