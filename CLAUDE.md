@@ -1,6 +1,6 @@
 # CLAUDE.md - AI Assistant Guide for organizer-api
 
-> **Last Updated**: 2026-01-23
+> **Last Updated**: 2026-03-02
 > **Project Status**: New Project - Initial Setup Phase
 > **Primary Branch**: TBD (main/master)
 > **Development Branch Pattern**: `claude/*`
@@ -469,6 +469,15 @@ LOG_LEVEL=info
 - **Database connection**: Verify DATABASE_URL and database is running
 - **Module not found**: Run dependency installation command
 - **Test failures**: Review test output, check for environment issues
+- **Server not running**: The dev server is not persistent. Start it with:
+  ```bash
+  ANTHROPIC_AUTH_TOKEN=$(cat /home/claude/.claude/remote/.session_ingress_token) uvicorn src.main:app --host 0.0.0.0 --port 8000
+  ```
+  Always check `curl http://localhost:8000/health` before making API calls.
+
+### Known Gotchas in `src/api/agent.py`
+- `_todo_read` constructs `TodoRead` **manually** from a SQLAlchemy model — it does NOT use `from_attributes` auto-mapping.
+- Any new field added to the `TodoRead` schema must also be explicitly added to `_todo_read`. Omitting a field causes a Pydantic validation error on every agent call that touches a todo.
 
 ---
 
