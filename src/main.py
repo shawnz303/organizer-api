@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from src.config import settings
 from src.database import Base, engine
 from src.services.reminder_service import start_scheduler
-from src.api import reminders, todos, agent
+from src.api import reminders, todos, agent, upload
 
 
 @asynccontextmanager
@@ -47,6 +47,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(reminders.router, prefix="/api/v1")
 app.include_router(todos.router, prefix="/api/v1")
 app.include_router(agent.router, prefix="/api/v1")
+app.include_router(upload.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["health"])
