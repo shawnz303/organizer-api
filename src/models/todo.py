@@ -24,6 +24,7 @@ class Category(str, enum.Enum):
     engineering = "engineering"
     product = "product"
     fundraising = "fundraising"
+    ops = "ops"
 
 
 class TodoORM(Base):
