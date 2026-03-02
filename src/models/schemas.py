@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.models.todo import Priority, Status
+from src.models.todo import Priority, Status, Category
 
 
 class TodoCreate(BaseModel):
@@ -13,6 +13,7 @@ class TodoCreate(BaseModel):
     priority: Priority = Priority.medium
     status: Status = Status.pending
     tags: list[str] = []
+    category: Category | None = None
 
 
 class TodoUpdate(BaseModel):
@@ -22,6 +23,7 @@ class TodoUpdate(BaseModel):
     priority: Priority | None = None
     status: Status | None = None
     tags: list[str] | None = None
+    category: Category | None = None
 
 
 class TodoRead(BaseModel):
@@ -35,6 +37,7 @@ class TodoRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     last_reminded_at: datetime | None
+    category: Category | None
 
     model_config = {"from_attributes": True}
 

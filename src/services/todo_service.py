@@ -3,7 +3,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from src.models.todo import TodoORM, Priority, Status
+from src.models.todo import TodoORM, Priority, Status, Category
 from src.models.schemas import TodoCreate, TodoUpdate
 
 
@@ -16,6 +16,7 @@ class TodoService:
             priority=data.priority,
             status=data.status,
             tags=json.dumps(data.tags),
+            category=data.category,
         )
         db.add(todo)
         db.commit()
@@ -30,12 +31,15 @@ class TodoService:
         db: Session,
         status: Status | None = None,
         priority: Priority | None = None,
+        category: Category | None = None,
     ) -> list[TodoORM]:
         q = db.query(TodoORM)
         if status:
             q = q.filter(TodoORM.status == status)
         if priority:
             q = q.filter(TodoORM.priority == priority)
+        if category:
+            q = q.filter(TodoORM.category == category)
         return q.order_by(TodoORM.created_at.desc()).all()
 
     def update(self, db: Session, todo_id: int, data: TodoUpdate) -> TodoORM | None:

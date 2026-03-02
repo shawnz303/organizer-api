@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import String, Enum, DateTime, Text
+from sqlalchemy import String, Enum, DateTime, Text, VARCHAR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.database import Base
@@ -19,6 +19,13 @@ class Status(str, enum.Enum):
     done = "done"
 
 
+class Category(str, enum.Enum):
+    sales = "sales"
+    engineering = "engineering"
+    product = "product"
+    fundraising = "fundraising"
+
+
 class TodoORM(Base):
     __tablename__ = "todos"
 
@@ -34,3 +41,4 @@ class TodoORM(Base):
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
     last_reminded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    category: Mapped[Category | None] = mapped_column(Enum(Category), nullable=True)
