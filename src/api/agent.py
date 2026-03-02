@@ -24,6 +24,7 @@ def _todo_read(todo: TodoORM) -> TodoRead:
         created_at=todo.created_at,
         updated_at=todo.updated_at,
         last_reminded_at=todo.last_reminded_at,
+        category=todo.category,
     )
 
 
