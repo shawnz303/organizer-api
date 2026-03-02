@@ -87,11 +87,12 @@ TOOLS = [
 
 class AgentService:
     def __init__(self):
-        self.client = (
-            anthropic.Anthropic(api_key=settings.anthropic_api_key)
-            if settings.anthropic_api_key
-            else None
-        )
+        if settings.anthropic_auth_token:
+            self.client = anthropic.Anthropic(auth_token=settings.anthropic_auth_token)
+        elif settings.anthropic_api_key:
+            self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        else:
+            self.client = None
         self.todo_service = TodoService()
 
     def chat(self, db: Session, user_message: str) -> dict:
