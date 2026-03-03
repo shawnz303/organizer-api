@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -23,15 +24,15 @@ class TodoService:
         db.refresh(todo)
         return todo
 
-    def get(self, db: Session, todo_id: int) -> TodoORM | None:
+    def get(self, db: Session, todo_id: int) -> Optional[TodoORM]:
         return db.get(TodoORM, todo_id)
 
     def list_all(
         self,
         db: Session,
-        status: Status | None = None,
-        priority: Priority | None = None,
-        category: Category | None = None,
+        status: Optional[Status] = None,
+        priority: Optional[Priority] = None,
+        category: Optional[Category] = None,
     ) -> list[TodoORM]:
         q = db.query(TodoORM)
         if status:
@@ -42,7 +43,7 @@ class TodoService:
             q = q.filter(TodoORM.category == category)
         return q.order_by(TodoORM.created_at.desc()).all()
 
-    def update(self, db: Session, todo_id: int, data: TodoUpdate) -> TodoORM | None:
+    def update(self, db: Session, todo_id: int, data: TodoUpdate) -> Optional[TodoORM]:
         todo = db.get(TodoORM, todo_id)
         if not todo:
             return None

@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -30,9 +31,9 @@ def _todo_read(todo: TodoORM) -> TodoRead:
 
 @router.get("/todos", response_model=SuccessResponse)
 def list_todos(
-    status: Status | None = Query(None),
-    priority: Priority | None = Query(None),
-    category: Category | None = Query(None),
+    status: Optional[Status] = Query(None),
+    priority: Optional[Priority] = Query(None),
+    category: Optional[Category] = Query(None),
     db: Session = Depends(get_db),
 ):
     todos = service.list_all(db, status=status, priority=priority, category=category)
