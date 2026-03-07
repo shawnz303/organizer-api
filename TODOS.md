@@ -1,5 +1,5 @@
 # Todo List
-_Last exported: 2026-03-07 19:47 UTC_
+_Last exported: 2026-03-07 20:05 UTC_
 _27 pending · 0 in progress · 15 done_
 
 ## Pending
@@ -13,14 +13,14 @@ _27 pending · 0 in progress · 15 done_
 - [ ] **#37** Ambulatory research for MemorialCare [medium] `product`
 - [ ] **#36** Keep focus on CIED product [medium] #cied #product
 - [ ] **#35** Set up team meetings for patient services leadership [medium] #meetings #patient-services #leadership
-- [ ] **#34** Get Beth involved with Cedars rollout more [medium] #cedars #rollout
+- [ ] **#34** Get Beth involved with Julien rollout more [medium] #julien #rollout
 - [ ] **#33** Options for Richard Chang [medium] #hiring #people-ops
-- [ ] **#23** Check back in on Cedars private practices [medium] `sales` #cedars #follow-up
+- [ ] **#23** Check back in on Julien private practices [medium] `sales` #julien #follow-up
 - [ ] **#22** Give Jon Preisler west coast ISR engagement plan [medium] #hf-navigator #jon-preisler #isr #west-coast
 - [ ] **#32** Talk to Jackson about joining as Chief of Staff [medium]
 - [ ] **#30** Complete negotiation with Vijay on the contract — review emails first [medium]
 - [ ] **#29** Reach out to Shana Coker — due 2026-03-03 [medium]
-- [ ] **#28** Set up Cedars meeting with Khandwalla and Shehata re mobile app [medium]
+- [ ] **#28** Set up Julien meeting with Khandwalla and Shehata re mobile app [medium]
 - [ ] **#25** Transfer money at RhythmScience accounts [medium] `ops`
 - [ ] **#24** Work on DOD agreement [medium]
 - [ ] **#21** Share HF Navigator plan feedback to Raj — due 2026-03-04 [medium] #planning #hf-navigator
