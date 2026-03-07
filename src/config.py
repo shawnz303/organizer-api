@@ -7,6 +7,10 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./todos.db"
     port: int = 8000
     reminder_check_interval_minutes: int = 60
+    twilio_account_sid: str | None = None
+    twilio_auth_token: str | None = None
+    twilio_phone_number: str | None = None
+    user_phone_number: str | None = None
 
     class Config:
         env_file = ".env"

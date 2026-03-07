@@ -28,10 +28,29 @@ def check_reminders() -> None:
             }
             for t in overdue
         ]
+        if overdue:
+            _send_sms_reminders(overdue, now)
         for t in overdue:
             service.mark_reminded(db, t.id)
     finally:
         db.close()
+
+
+def _send_sms_reminders(todos, now: datetime) -> None:
+    try:
+        from src.services.sms_service import send_sms
+        lines = []
+        for t in todos:
+            if t.due_date and t.due_date < now:
+                tag = "OVERDUE"
+            else:
+                tag = "REMINDER"
+            due_str = f" (due {t.due_date.strftime('%a %b %d')})" if t.due_date else ""
+            lines.append(f"{tag}: #{t.id} {t.title}{due_str}")
+        message = "\n".join(lines)
+        send_sms(message)
+    except Exception:
+        pass
 
 
 def get_current_reminders() -> list[dict]:
