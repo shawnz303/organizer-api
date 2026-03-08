@@ -1,8 +1,13 @@
 from src.config import settings
+from src.services.imessage_service import send_imessage
 
 
 def send_sms(body: str, to: str | None = None) -> bool:
-    """Send an SMS via Twilio. Returns True on success, False if not configured."""
+    """Send a message. Tries iMessage first; falls back to Twilio if iMessage fails."""
+    if send_imessage(body, to):
+        return True
+
+    # Twilio fallback
     if not all([
         settings.twilio_account_sid,
         settings.twilio_auth_token,

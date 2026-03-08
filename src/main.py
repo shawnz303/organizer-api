@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from src.config import settings
 from src.database import Base, engine
 from src.services.reminder_service import start_scheduler
+from src.services.imessage_service import initialize_last_rowid, check_inbound_messages
 from src.api import reminders, todos, agent, upload, sms
 from src.mcp_server import mcp
 
@@ -15,6 +16,14 @@ from src.mcp_server import mcp
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     scheduler = start_scheduler(settings.reminder_check_interval_minutes)
+    initialize_last_rowid()
+    scheduler.add_job(
+        check_inbound_messages,
+        trigger="interval",
+        minutes=settings.imessage_poll_interval_minutes,
+        id="imessage_poll",
+        replace_existing=True,
+    )
     yield
     scheduler.shutdown()
 
