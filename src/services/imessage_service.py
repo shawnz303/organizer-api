@@ -13,6 +13,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from src.config import settings
 from src.database import SessionLocal
 from src.models.schemas import TodoCreate
+from src.services.agent_service import AgentService
 from src.services.todo_service import TodoService
 
 logger = logging.getLogger(__name__)
@@ -273,7 +274,7 @@ def poll_imessage() -> None:
     for rowid, raw_text, attributed_body in rows:
         _last_seen_rowid = rowid
         text = _extract_text(raw_text, attributed_body)
-        if not text or not text.startswith("/"):
+        if not text or (not text.startswith("/") and not text.startswith(".")):
             continue
 
         cmd = text.strip()
@@ -301,6 +302,17 @@ def poll_imessage() -> None:
 
         if reply and settings.user_imessage_handle:
             _send_imessage(settings.user_imessage_handle, reply)
+        elif text.startswith("."):
+            nl_cmd = text.strip()[1:].strip()
+            db = SessionLocal()
+            try:
+                agent = AgentService()
+                result = agent.chat(db, nl_cmd)
+                reply = result["reply"]
+            finally:
+                db.close()
+            if reply and settings.user_imessage_handle:
+                _send_imessage(settings.user_imessage_handle, reply)
 
 
 def _init_last_seen_rowid() -> None:
