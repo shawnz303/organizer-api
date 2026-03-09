@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 import sqlite3
@@ -6,6 +7,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
+import anthropic
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from src.config import settings
@@ -114,6 +116,58 @@ def _create_reminder_from_text(text: str) -> str:
     return _create_todo_from_text(title, due_date)
 
 
+def _send_nightly_summary() -> None:
+    if not settings.user_imessage_handle:
+        logger.warning("Nightly summary skipped: user_imessage_handle not set")
+        return
+
+    db = SessionLocal()
+    try:
+        service = TodoService()
+        todos = service.list_all(db)
+    finally:
+        db.close()
+
+    if not todos:
+        _send_imessage(settings.user_imessage_handle, "No todos for tomorrow. Clean slate!")
+        return
+
+    tomorrow = (datetime.now() + timedelta(days=1)).date()
+    todo_summaries = [
+        {
+            "id": t.id,
+            "title": t.title,
+            "due_date": t.due_date.strftime("%m/%d") if t.due_date else None,
+            "priority": t.priority,
+            "status": t.status,
+        }
+        for t in todos
+        if t.status != "done"
+    ]
+
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key) if settings.anthropic_api_key else None
+    if not client:
+        logger.warning("Nightly summary skipped: no Anthropic API key")
+        return
+
+    prompt = (
+        f"Tomorrow is {tomorrow}. Here are the user's open todos:\n\n"
+        f"{json.dumps(todo_summaries, indent=2)}\n\n"
+        "Write a short, friendly iMessage-style summary of their top priorities for tomorrow. "
+        "Be concise — 3-5 bullet points max. Lead with the most urgent/important items. "
+        "No fluff, no sign-off. Use plain text, no markdown."
+    )
+
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=512,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    summary = response.content[0].text.strip()
+    _send_imessage(settings.user_imessage_handle, f"Tomorrow's priorities:\n\n{summary}")
+    logger.info("Nightly summary sent")
+
+
 def poll_imessage() -> None:
     global _last_seen_rowid
     if not IMESSAGE_DB.exists():
@@ -187,6 +241,16 @@ def start_imessage_poller() -> BackgroundScheduler:
         id="imessage_poll",
         replace_existing=True,
     )
+    scheduler.add_job(
+        _send_nightly_summary,
+        trigger="cron",
+        hour=20,
+        minute=0,
+        timezone="America/Los_Angeles",
+        id="nightly_summary",
+        replace_existing=True,
+    )
     scheduler.start()
     logger.info(f"iMessage poller started (every {settings.imessage_poll_interval_seconds}s)")
+    logger.info("Nightly summary scheduled for 8:00 PM PT")
     return scheduler
