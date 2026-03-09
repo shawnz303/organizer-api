@@ -27,4 +27,4 @@ jobs:
       RAILWAY_SERVICE_ID: ${{ vars.RAILWAY_SERVICE_ID }}
     steps:
       - uses: actions/checkout@v4
-      - run: railway up --service $RAILWAY_SERVICE_ID --ci
+      - run: railway up --service 38c7bf9d-e6e7-4eda-b5c0-85a1607dce0b --ci
