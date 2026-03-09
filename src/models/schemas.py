@@ -36,8 +36,8 @@ class TodoRead(BaseModel):
     tags: List[str]
     created_at: datetime
     updated_at: datetime
-    last_reminded_at: Optional[datetime]
-    category: Optional[Category]
+    last_reminded_at: Optional[datetime] = None
+    category: Optional[Category] = None
 
     model_config = {"from_attributes": True}
 
