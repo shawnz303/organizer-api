@@ -168,6 +168,50 @@ def _send_nightly_summary() -> None:
     logger.info("Nightly summary sent")
 
 
+def _get_next_task_recommendation() -> str:
+    db = SessionLocal()
+    try:
+        service = TodoService()
+        todos = service.list_all(db)
+    finally:
+        db.close()
+
+    open_todos = [t for t in todos if t.status != "done"]
+    if not open_todos:
+        return "Nothing on your list. Take a break!"
+
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key) if settings.anthropic_api_key else None
+    if not client:
+        return "AI unavailable — no API key configured."
+
+    today = datetime.now().date()
+    todo_summaries = [
+        {
+            "id": t.id,
+            "title": t.title,
+            "due_date": t.due_date.strftime("%m/%d") if t.due_date else None,
+            "priority": t.priority,
+            "status": t.status,
+        }
+        for t in open_todos
+    ]
+
+    prompt = (
+        f"Today is {today}. Here are the user's open todos:\n\n"
+        f"{json.dumps(todo_summaries, indent=2)}\n\n"
+        "The user just asked: 'What should I work on right now?' "
+        "Pick the single most important task and explain in 1-2 sentences why it's the top priority. "
+        "Be direct and actionable. No fluff. Plain text only."
+    )
+
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=256,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.content[0].text.strip()
+
+
 def poll_imessage() -> None:
     global _last_seen_rowid
     if not IMESSAGE_DB.exists():
@@ -198,6 +242,10 @@ def poll_imessage() -> None:
         if cmd == "/s":
             reply = _get_todo_list_text()
             logger.info("iMessage /s → sending todo list")
+
+        elif cmd == "/q":
+            reply = _get_next_task_recommendation()
+            logger.info("iMessage /q → sending task recommendation")
 
         elif cmd.startswith("/r "):
             content = cmd[3:].strip()
