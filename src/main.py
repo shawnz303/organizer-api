@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from src.config import settings
 from src.database import Base, engine
 from src.services.reminder_service import start_scheduler
+from src.services.imessage_service import start_imessage_poller
 from src.api import reminders, todos, agent
 
 
@@ -14,8 +15,10 @@ from src.api import reminders, todos, agent
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     scheduler = start_scheduler(settings.reminder_check_interval_minutes)
+    imessage_scheduler = start_imessage_poller()
     yield
     scheduler.shutdown()
+    imessage_scheduler.shutdown()
 
 
 app = FastAPI(
