@@ -7,10 +7,12 @@ from sqlalchemy.orm import Session
 from src.database import get_db
 from src.models.schemas import SuccessResponse, TodoCreate, TodoRead, TodoUpdate
 from src.models.todo import Category, Priority, Status, TodoORM
+from src.services.category_service import CategoryService
 from src.services.todo_service import TodoService
 
 router = APIRouter(tags=["todos"])
 service = TodoService()
+category_service = CategoryService()
 
 
 def _todo_read(todo: TodoORM) -> TodoRead:
@@ -47,6 +49,15 @@ def list_todos(
 def create_todo(data: TodoCreate, db: Session = Depends(get_db)):
     todo = service.create(db, data)
     return SuccessResponse(data=_todo_read(todo), message="Todo created successfully")
+
+
+@router.get("/todos/categories", response_model=SuccessResponse)
+def get_todos_by_category(db: Session = Depends(get_db)):
+    results = category_service.analyze(db)
+    return SuccessResponse(
+        data=results,
+        message=f"Analysis for {len(results)} categories",
+    )
 
 
 @router.get("/todos/{todo_id}", response_model=SuccessResponse)

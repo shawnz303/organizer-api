@@ -14,6 +14,7 @@ from src.config import settings
 from src.database import SessionLocal
 from src.models.schemas import TodoCreate
 from src.services.agent_service import AgentService
+from src.services.category_service import CategoryService
 from src.services.todo_service import TodoService
 
 logger = logging.getLogger(__name__)
@@ -75,6 +76,28 @@ def _get_todo_list_text() -> str:
         return "\n".join(lines).strip()
     finally:
         db.close()
+
+
+def _get_category_analysis_text() -> str:
+    db = SessionLocal()
+    try:
+        results = CategoryService().analyze(db)
+    finally:
+        db.close()
+
+    if not results:
+        return "No open todos."
+
+    lines = []
+    for item in results:
+        lines.append(f"— {item['category'].upper()} —")
+        for t in item["tasks"]:
+            due = f" (due {t['due_date'][:10]})" if t["due_date"] else ""
+            lines.append(f"• {t['title']}{due} [{t['priority']}]")
+        lines.append(f"Themes: {item['commonalities']}")
+        lines.append(f"Strategy: {item['strategy']}")
+        lines.append("")
+    return "\n".join(lines).strip()
 
 
 def _parse_date(token: str) -> Optional[datetime]:
@@ -287,6 +310,10 @@ def poll_imessage() -> None:
         elif cmd == "/q":
             reply = _get_next_task_recommendation()
             logger.info("iMessage /q → sending task recommendation")
+
+        elif cmd == "/c":
+            reply = _get_category_analysis_text()
+            logger.info("iMessage /c → sending category analysis")
 
         elif cmd.startswith("/r "):
             content = cmd[3:].strip()

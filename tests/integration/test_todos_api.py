@@ -85,3 +85,41 @@ def test_delete_todo(client):
 def test_delete_todo_not_found(client):
     response = client.delete("/api/v1/todos/99999")
     assert response.status_code == 404
+
+
+def test_get_todos_by_category_empty(client):
+    response = client.get("/api/v1/todos/categories")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"] == []
+
+
+def test_get_todos_by_category_groups_correctly(client, monkeypatch):
+    import json
+    from unittest.mock import MagicMock
+    import src.api.todos as todos_module
+
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = MagicMock(
+        content=[MagicMock(text=json.dumps({
+            "commonalities": "Both are engineering tasks.",
+            "strategy": "Tackle together in one sprint.",
+        }))]
+    )
+    monkeypatch.setattr(todos_module.category_service, "client", mock_client)
+
+    client.post("/api/v1/todos", json={"title": "Fix bug", "category": "engineering"})
+    client.post("/api/v1/todos", json={"title": "Add feature", "category": "engineering"})
+    client.post("/api/v1/todos", json={"title": "Sales call", "category": "sales"})
+
+    response = client.get("/api/v1/todos/categories")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+
+    categories = {r["category"]: r for r in body["data"]}
+    assert "engineering" in categories
+    assert "sales" in categories
+    assert len(categories["engineering"]["tasks"]) == 2
+    assert categories["engineering"]["commonalities"] == "Both are engineering tasks."
