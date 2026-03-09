@@ -38,7 +38,7 @@ TOOLS = [
     },
     {
         "name": "list_todos",
-        "description": "List current todos, optionally filtered by status or priority.",
+        "description": "List current todos, optionally filtered by status, priority, or category.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -51,6 +51,10 @@ TOOLS = [
                     "type": "string",
                     "enum": ["low", "medium", "high"],
                     "description": "Filter by priority",
+                },
+                "category": {
+                    "type": "string",
+                    "description": "Filter by category",
                 },
             },
         },
@@ -80,6 +84,47 @@ TOOLS = [
                 },
             },
             "required": ["todo_id", "priority"],
+        },
+    },
+    {
+        "name": "update_todo",
+        "description": "Update any fields of a todo by its ID (title, description, due_date, status, priority, category, tags).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "todo_id": {"type": "integer", "description": "The ID of the todo to update"},
+                "title": {"type": "string", "description": "New title"},
+                "description": {"type": "string", "description": "New description"},
+                "due_date": {"type": "string", "description": "ISO 8601 datetime string or null to clear"},
+                "status": {
+                    "type": "string",
+                    "enum": ["pending", "in_progress", "done"],
+                    "description": "New status",
+                },
+                "priority": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high"],
+                    "description": "New priority",
+                },
+                "category": {"type": "string", "description": "New category"},
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "New list of tags",
+                },
+            },
+            "required": ["todo_id"],
+        },
+    },
+    {
+        "name": "delete_todo",
+        "description": "Permanently delete a todo by its ID.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "todo_id": {"type": "integer", "description": "The ID of the todo to delete"},
+            },
+            "required": ["todo_id"],
         },
     },
 ]
@@ -184,6 +229,7 @@ class AgentService:
                 db,
                 status=tool_input.get("status"),
                 priority=tool_input.get("priority"),
+                category=tool_input.get("category"),
             )
             actions_taken.append(f"Listed {len(todos)} todos")
             return [
@@ -215,6 +261,29 @@ class AgentService:
                     f"Updated priority of todo {todo_id} to {priority}"
                 )
                 todos_affected.append(updated)
+                return {"success": True}
+            return {"success": False, "error": "Todo not found"}
+
+        if tool_name == "update_todo":
+            todo_id = tool_input["todo_id"]
+            fields = {k: v for k, v in tool_input.items() if k != "todo_id"}
+            if "due_date" in fields:
+                try:
+                    fields["due_date"] = datetime.fromisoformat(fields["due_date"]) if fields["due_date"] else None
+                except (ValueError, TypeError):
+                    fields.pop("due_date")
+            updated = self.todo_service.update(db, todo_id, TodoUpdate(**fields))
+            if updated:
+                actions_taken.append(f"Updated todo ID {todo_id}: '{updated.title}'")
+                todos_affected.append(updated)
+                return {"success": True}
+            return {"success": False, "error": "Todo not found"}
+
+        if tool_name == "delete_todo":
+            todo_id = tool_input["todo_id"]
+            deleted = self.todo_service.delete(db, todo_id)
+            if deleted:
+                actions_taken.append(f"Deleted todo ID {todo_id}")
                 return {"success": True}
             return {"success": False, "error": "Todo not found"}
 
