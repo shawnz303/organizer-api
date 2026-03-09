@@ -97,14 +97,31 @@ def _parse_date(token: str) -> Optional[datetime]:
     return None
 
 
+def _expand_todo_description(title: str) -> Optional[str]:
+    if not settings.anthropic_api_key:
+        return None
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": (
+            f"Turn this task headline into a detailed, actionable plan:\n\n\"{title}\"\n\n"
+            "Include: goal, key steps, dependencies or blockers to consider, and a definition of done. "
+            "Be concise but thorough. Plain text only, no markdown."
+        )}],
+    )
+    return response.content[0].text.strip()
+
+
 def _create_todo_from_text(text: str, due_date: Optional[datetime] = None, category=None) -> str:
     title = text.strip()
     if not title:
         return "No title provided."
+    description = _expand_todo_description(title)
     db = SessionLocal()
     try:
         service = TodoService()
-        todo = service.create(db, TodoCreate(title=title, due_date=due_date, category=category))
+        todo = service.create(db, TodoCreate(title=title, due_date=due_date, category=category, description=description))
         due_str = f" due {due_date.strftime('%m/%d')}" if due_date else ""
         cat_str = f" [{todo.category.value}]" if todo.category else ""
         return f"Created: {todo.title}{due_str}{cat_str}"
