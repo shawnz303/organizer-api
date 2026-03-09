@@ -58,11 +58,20 @@ def _get_todo_list_text() -> str:
         todos = service.list_all(db)
         if not todos:
             return "No todos."
-        lines = []
+
+        grouped: dict = {}
         for t in todos:
-            due = f" (due {t.due_date.strftime('%m/%d')})" if t.due_date else ""
-            lines.append(f"[{t.status}] {t.title}{due} [{t.priority}]")
-        return "\n".join(lines)
+            key = t.category.value if t.category else "uncategorized"
+            grouped.setdefault(key, []).append(t)
+
+        lines = []
+        for category, items in sorted(grouped.items()):
+            lines.append(f"— {category.upper()} —")
+            for t in items:
+                due = f" (due {t.due_date.strftime('%m/%d')})" if t.due_date else ""
+                lines.append(f"[{t.status}] {t.title}{due} [{t.priority}]")
+            lines.append("")
+        return "\n".join(lines).strip()
     finally:
         db.close()
 
@@ -88,32 +97,46 @@ def _parse_date(token: str) -> Optional[datetime]:
     return None
 
 
-def _create_todo_from_text(text: str, due_date: Optional[datetime] = None) -> str:
+def _create_todo_from_text(text: str, due_date: Optional[datetime] = None, category=None) -> str:
     title = text.strip()
     if not title:
         return "No title provided."
     db = SessionLocal()
     try:
         service = TodoService()
-        todo = service.create(db, TodoCreate(title=title, due_date=due_date))
+        todo = service.create(db, TodoCreate(title=title, due_date=due_date, category=category))
         due_str = f" due {due_date.strftime('%m/%d')}" if due_date else ""
-        return f"Created: {todo.title}{due_str}"
+        cat_str = f" [{todo.category.value}]" if todo.category else ""
+        return f"Created: {todo.title}{due_str}{cat_str}"
     finally:
         db.close()
 
 
 def _create_reminder_from_text(text: str) -> str:
+    from src.models.todo import Category
     parts = text.strip().split()
     if not parts:
         return "No reminder text provided."
+
     due_date = None
+    category = None
+
     if len(parts) >= 2:
         candidate = parts[-1]
         due_date = _parse_date(candidate)
         if due_date:
             parts = parts[:-1]
+
+    if len(parts) >= 2:
+        candidate = parts[-1].lower()
+        try:
+            category = Category(candidate)
+            parts = parts[:-1]
+        except ValueError:
+            pass
+
     title = " ".join(parts)
-    return _create_todo_from_text(title, due_date)
+    return _create_todo_from_text(title, due_date, category)
 
 
 def _send_nightly_summary() -> None:
