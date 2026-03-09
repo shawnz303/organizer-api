@@ -132,7 +132,7 @@ def _send_nightly_summary() -> None:
         _send_imessage(settings.user_imessage_handle, "No todos for tomorrow. Clean slate!")
         return
 
-    tomorrow = (datetime.now() + timedelta(days=1)).date()
+    tomorrow = datetime.now().date()
     todo_summaries = [
         {
             "id": t.id,
@@ -151,9 +151,9 @@ def _send_nightly_summary() -> None:
         return
 
     prompt = (
-        f"Tomorrow is {tomorrow}. Here are the user's open todos:\n\n"
+        f"Today is {tomorrow}. Here are the user's open todos:\n\n"
         f"{json.dumps(todo_summaries, indent=2)}\n\n"
-        "Write a short, friendly iMessage-style summary of their top priorities for tomorrow. "
+        "Write a short, friendly iMessage-style summary of their top priorities for today. "
         "Be concise — 3-5 bullet points max. Lead with the most urgent/important items. "
         "No fluff, no sign-off. Use plain text, no markdown."
     )
@@ -164,7 +164,7 @@ def _send_nightly_summary() -> None:
         messages=[{"role": "user", "content": prompt}],
     )
     summary = response.content[0].text.strip()
-    _send_imessage(settings.user_imessage_handle, f"Tomorrow's priorities:\n\n{summary}")
+    _send_imessage(settings.user_imessage_handle, f"Good morning! Today's priorities:\n\n{summary}")
     logger.info("Nightly summary sent")
 
 
@@ -244,7 +244,8 @@ def start_imessage_poller() -> BackgroundScheduler:
     scheduler.add_job(
         _send_nightly_summary,
         trigger="cron",
-        hour=20,
+        day_of_week="mon-fri",
+        hour=8,
         minute=0,
         timezone="America/Los_Angeles",
         id="nightly_summary",
@@ -252,5 +253,5 @@ def start_imessage_poller() -> BackgroundScheduler:
     )
     scheduler.start()
     logger.info(f"iMessage poller started (every {settings.imessage_poll_interval_seconds}s)")
-    logger.info("Nightly summary scheduled for 8:00 PM PT")
+    logger.info("Morning summary scheduled for 8:00 AM PT, Mon-Fri")
     return scheduler
