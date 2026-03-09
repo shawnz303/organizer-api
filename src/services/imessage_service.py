@@ -147,8 +147,12 @@ def poll_imessage() -> None:
 
         elif cmd.startswith("/r "):
             content = cmd[3:].strip()
-            reply = _create_reminder_from_text(content)
-            logger.info(f"iMessage /r → {reply}")
+            confirmation = _create_reminder_from_text(content)
+            logger.info(f"iMessage /r → {confirmation}")
+            if settings.user_imessage_handle:
+                _send_imessage(settings.user_imessage_handle, confirmation)
+                _send_imessage(settings.user_imessage_handle, _get_todo_list_text())
+            continue
 
         elif cmd.startswith("/r"):
             reply = "Usage: /r <title> [today|tomorrow|MM/DD]"
