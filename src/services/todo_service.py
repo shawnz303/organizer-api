@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -65,16 +65,40 @@ class TodoService:
         db.commit()
         return True
 
-    def get_overdue_or_stale(self, db: Session) -> list[TodoORM]:
+    def get_overdue(self, db: Session) -> list[TodoORM]:
         now = datetime.utcnow()
         return (
             db.query(TodoORM)
             .filter(
                 TodoORM.status != Status.done,
-                (TodoORM.due_date < now) | (TodoORM.last_reminded_at == None),  # noqa: E711
+                TodoORM.due_date < now,
+                (TodoORM.snoozed_until == None) | (TodoORM.snoozed_until < now),  # noqa: E711
             )
             .all()
         )
+
+    def get_stale(self, db: Session, stale_days: int = 3) -> list[TodoORM]:
+        now = datetime.utcnow()
+        cutoff = now - timedelta(days=stale_days)
+        return (
+            db.query(TodoORM)
+            .filter(
+                TodoORM.status != Status.done,
+                TodoORM.updated_at < cutoff,
+                (TodoORM.last_reminded_at == None) | (TodoORM.last_reminded_at < cutoff),  # noqa: E711
+                (TodoORM.snoozed_until == None) | (TodoORM.snoozed_until < now),  # noqa: E711
+            )
+            .all()
+        )
+
+    def get_overdue_or_stale(self, db: Session) -> list[TodoORM]:
+        """Kept for backwards compatibility — returns overdue + stale combined."""
+        seen = {t.id for t in self.get_overdue(db)}
+        result = list(self.get_overdue(db))
+        for t in self.get_stale(db):
+            if t.id not in seen:
+                result.append(t)
+        return result
 
     def mark_reminded(self, db: Session, todo_id: int) -> None:
         todo = db.get(TodoORM, todo_id)

@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from typing import Optional
 
 import anthropic
 from sqlalchemy.orm import Session
@@ -8,6 +9,28 @@ from src.config import settings
 from src.models.schemas import TodoCreate, TodoUpdate
 from src.models.todo import Status
 from src.services.todo_service import TodoService
+
+_SNOOZE_TOOL = {
+    "name": "snooze_todo",
+    "description": "Snooze a todo until a future date/time so it won't surface in reminders until then.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "todo_id": {"type": "integer", "description": "The ID of the todo to snooze"},
+            "snooze_until": {
+                "type": "string",
+                "description": "ISO 8601 datetime string for when to resurface this todo",
+            },
+        },
+        "required": ["todo_id", "snooze_until"],
+    },
+}
+
+_OVERDUE_TOOL = {
+    "name": "get_overdue_todos",
+    "description": "List todos that are past their due date or haven't been updated in 3+ days.",
+    "input_schema": {"type": "object", "properties": {}},
+}
 
 TOOLS = [
     {
@@ -127,6 +150,8 @@ TOOLS = [
             "required": ["todo_id"],
         },
     },
+    _SNOOZE_TOOL,
+    _OVERDUE_TOOL,
 ]
 
 
@@ -139,7 +164,7 @@ class AgentService:
         )
         self.todo_service = TodoService()
 
-    def chat(self, db: Session, user_message: str) -> dict:
+    def chat(self, db: Session, user_message: str, history: Optional[list] = None) -> dict:
         if not self.client:
             return {
                 "reply": "AI features are disabled — no Anthropic API key configured.",
@@ -147,15 +172,20 @@ class AgentService:
                 "todos_affected": [],
             }
 
-        messages = [{"role": "user", "content": user_message}]
+        prior = history or []
+        messages = prior + [{"role": "user", "content": user_message}]
         actions_taken: list[str] = []
         todos_affected: list = []
 
+        from src.services.imessage_service import _get_time_context
         system_prompt = (
-            "You are a todo management assistant. Use the provided tools to create, "
-            "list, complete, or update todos based on the user's natural language request. "
-            "Always confirm what actions you took in a friendly, concise reply. "
-            f"Today's date and time is {datetime.utcnow().isoformat()} UTC."
+            f"{_get_time_context()}\n\n"
+            "You are a proactive executive assistant managing todos for a busy founder. "
+            "Use the provided tools to create, list, complete, snooze, or update todos. "
+            "Tasks span sales, engineering, product, fundraising, ops, and personal categories. "
+            "When asked what to work on, factor in urgency, due dates, and time of day — "
+            "Friday afternoons call for closing loops, Monday mornings for setting direction. "
+            "Be direct and brief. No emojis. Plain text only."
         )
 
         reply = "Done."
@@ -286,5 +316,31 @@ class AgentService:
                 actions_taken.append(f"Deleted todo ID {todo_id}")
                 return {"success": True}
             return {"success": False, "error": "Todo not found"}
+
+        if tool_name == "snooze_todo":
+            todo_id = tool_input["todo_id"]
+            try:
+                snooze_until = datetime.fromisoformat(tool_input["snooze_until"])
+            except (ValueError, TypeError):
+                return {"success": False, "error": "Invalid snooze_until datetime"}
+            from src.models.schemas import TodoUpdate
+            updated = self.todo_service.update(db, todo_id, TodoUpdate(snoozed_until=snooze_until))
+            if updated:
+                actions_taken.append(f"Snoozed todo ID {todo_id} until {snooze_until.isoformat()}")
+                return {"success": True}
+            return {"success": False, "error": "Todo not found"}
+
+        if tool_name == "get_overdue_todos":
+            overdue = self.todo_service.get_overdue(db)
+            stale = self.todo_service.get_stale(db)
+            result = []
+            seen = set()
+            for t in overdue:
+                seen.add(t.id)
+                result.append({"id": t.id, "title": t.title, "due_date": t.due_date.isoformat() if t.due_date else None, "reason": "overdue"})
+            for t in stale:
+                if t.id not in seen:
+                    result.append({"id": t.id, "title": t.title, "updated_at": t.updated_at.isoformat(), "reason": "stale"})
+            return result
 
         return {"success": False, "error": f"Unknown tool: {tool_name}"}

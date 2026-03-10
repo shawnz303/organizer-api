@@ -24,6 +24,7 @@ class TodoUpdate(BaseModel):
     status: Optional[Status] = None
     tags: Optional[List[str]] = None
     category: Optional[Category] = None
+    snoozed_until: Optional[datetime] = None
 
 
 class TodoRead(BaseModel):
@@ -37,6 +38,7 @@ class TodoRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     last_reminded_at: Optional[datetime] = None
+    snoozed_until: Optional[datetime] = None
     category: Optional[Category] = None
 
     model_config = {"from_attributes": True}

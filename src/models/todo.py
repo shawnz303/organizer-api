@@ -26,6 +26,7 @@ class Category(str, enum.Enum):
     product = "product"
     fundraising = "fundraising"
     ops = "ops"
+    personal = "personal"
 
 
 class TodoORM(Base):
@@ -43,4 +44,5 @@ class TodoORM(Base):
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
     last_reminded_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    snoozed_until: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     category: Mapped[Optional[Category]] = mapped_column(Enum(Category), nullable=True)
